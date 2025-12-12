@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>안나눔 로또 & 연금복권 생성기</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            width: 100%;
+            max-width: 500px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 800;
+        }
+
+        .header p {
+            margin: 10px 0 0;
+            font-size: 14px;
+            opacity: 0.9;
+            font-style: italic;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            background: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: #764ba2;
+            border-bottom: 3px solid #764ba2;
+            background-color: #f9fafb;
+        }
+
+        .content {
+            padding: 20px;
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        .control-panel {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        select {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            font-size: 16px;
+        }
+
+        .btn-generate {
+            background-color: #764ba2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .btn-generate:active {
+            transform: scale(0.95);
+        }
+
+        /* 결과 표시 영역 */
+        .result-area {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-height: 100px;
+        }
+
+        .game-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px;
+            background-color: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .game-label {
+            font-weight: bold;
+            color: #4b5563;
+            margin-right: 5px;
+            font-size: 14px;
+            /* 너비 수정: 30px -> 40px */
+            width: 40px; 
+            /* 텍스트 줄바꿈 방지 */
+            white-space: nowrap; 
+        }
+
+        .ball {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: white;
+            font-size: 14px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            box-shadow: inset -2px -2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* 로또 공 색상 (한국 로또 기준) */
+        .ball-yellow { background-color: #fbc400; color: #333; text-shadow: none;} /* 1-10 */
+        .ball-blue { background-color: #69c8f2; }   /* 11-20 */
+        .ball-red { background-color: #ff7272; }    /* 21-30 */
+        .ball-gray { background-color: #aaaaaa; }   /* 31-40 */
+        .ball-green { background-color: #b0d840; }  /* 41-45 */
+        
+        /* 연금복권 스타일 */
+        .pension-group {
+            padding: 5px 12px;
+            background-color: #333;
+            color: white;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .ball-pension {
+            background-color: white;
+            border: 2px solid #764ba2;
+            color: #764ba2;
+            width: 36px;
+            height: 36px;
+            text-shadow: none;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 15px;
+            color: #9ca3af;
+            font-size: 12px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>안나눔 Lotto 6/45</h1>
+        <p>"절반은 내꺼, 남은 절반도 내꺼"</p>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('lotto')">로또 6/45</button>
+        <button class="tab-btn" onclick="switchTab('pension')">연금복권 720+</button>
+    </div>
+
+    <!-- 로또 탭 -->
+    <div id="lotto" class="content active">
+        <div class="control-panel">
+            <select id="gameCount">
+                <option value="1">1 게임 (1,000원)</option>
+                <option value="2">2 게임 (2,000원)</option>
+                <option value="3">3 게임 (3,000원)</option>
+                <option value="4">4 게임 (4,000원)</option>
+                <option value="5" selected>5 게임 (5,000원)</option>
+            </select>
+            <button class="btn-generate" onclick="generateLotto()">번호 생성</button>
+        </div>
+        <div id="lottoResult" class="result-area">
+            <div style="text-align: center; color: #9ca3af; padding: 20px;">
+                구매 금액을 선택하고<br>생성 버튼을 눌러주세요!
+            </div>
+        </div>
+    </div>
+
+    <!-- 연금복권 탭 -->
+    <div id="pension" class="content">
+        <div class="control-panel">
+            <span style="font-weight: bold; color: #4b5563;">1세트 (1,000원)</span>
+            <button class="btn-generate" onclick="generatePension()">번호 생성</button>
+        </div>
+        <div id="pensionResult" class="result-area">
+             <div style="text-align: center; color: #9ca3af; padding: 20px;">
+                매달 700만원의 행운을<br>확인해보세요!
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Based on Excel Algorithm | 당첨 기원 🙏
+    </div>
+</div>
+
+<script>
+    // 탭 전환 함수
+    function switchTab(tabName) {
+        document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById(tabName).classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    // 로또 번호 생성 함수
+    function generateLotto() {
+        const count = parseInt(document.getElementById('gameCount').value);
+        const resultDiv = document.getElementById('lottoResult');
+        resultDiv.innerHTML = ''; // 초기화
+
+        const labels = ['A', 'B', 'C', 'D', 'E'];
+
+        for (let i = 0; i < count; i++) {
+            // 1~45 숫자 배열 생성 및 섞기
+            let numbers = [];
+            for (let j = 1; j <= 45; j++) numbers.push(j);
+            
+            // 피셔-예이츠 셔플 (무작위 섞기)
+            for (let k = numbers.length - 1; k > 0; k--) {
+                const randomIdx = Math.floor(Math.random() * (k + 1));
+                [numbers[k], numbers[randomIdx]] = [numbers[randomIdx], numbers[k]];
+            }
+
+            // 앞에서 6개 자르고 정렬
+            const winNumbers = numbers.slice(0, 6).sort((a, b) => a - b);
+
+            // HTML 생성
+            const row = document.createElement('div');
+            row.className = 'game-row';
+            
+            let html = `<span class="game-label">${labels[i]} 자 동</span>`;
+            
+            winNumbers.forEach(num => {
+                let colorClass = '';
+                if (num <= 10) colorClass = 'ball-yellow';
+                else if (num <= 20) colorClass = 'ball-blue';
+                else if (num <= 30) colorClass = 'ball-red';
+                else if (num <= 40) colorClass = 'ball-gray';
+                else colorClass = 'ball-green';
+
+                html += `<div class="ball ${colorClass}">${num}</div>`;
+            });
+
+            row.innerHTML = html;
+            resultDiv.appendChild(row);
+        }
+    }
+
+    // 연금복권 번호 생성 함수
+    function generatePension() {
+        const resultDiv = document.getElementById('pensionResult');
+        resultDiv.innerHTML = '';
+
+        // 조 생성 (1~5조)
+        const group = Math.floor(Math.random() * 5) + 1;
+        
+        // 6자리 번호 생성 (0~9 중복 가능)
+        let numbers = [];
+        for(let i=0; i<6; i++) {
+            numbers.push(Math.floor(Math.random() * 10));
+        }
+
+        const row = document.createElement('div');
+        row.className = 'game-row';
+        row.style.justifyContent = 'center';
+
+        let html = `<span class="pension-group">${group}조</span>`;
+        
+        numbers.forEach(num => {
+            html += `<div class="ball ball-pension">${num}</div>`;
+        });
+
+        row.innerHTML = html;
+        resultDiv.appendChild(row);
+    }
+</script>
+
+</body>
+</html>
