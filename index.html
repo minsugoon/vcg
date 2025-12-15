@@ -3,449 +3,259 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>안나눔 로또 & 연금복권 생성기</title>
-    <!-- 화면 캡처를 위한 라이브러리 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <title>바이브 코딩 게임즈 | Vibe Coding Games</title>
     <style>
+        /* 기본 스타일 설정 */
         :root {
-            --primary-color: #3b82f6;
+            --primary-color: #6366f1;
             --bg-color: #f3f4f6;
             --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
-            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: var(--bg-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
+            color: var(--text-main);
+            line-height: 1.6;
         }
 
-        .container {
-            background-color: var(--card-bg);
-            width: 100%;
-            max-width: 500px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            overflow: hidden;
-            border: 1px solid #e5e7eb;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 25px 20px;
+        /* 헤더 스타일 */
+        header {
             text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #4f46e5 0%, #818cf8 100%);
+            color: white;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
-        /* 최신 회차 정보 스타일 */
-        .draw-info-badge {
-            display: inline-block;
-            background-color: rgba(255, 255, 255, 0.2);
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
+        header h1 {
+            font-size: 2.5rem;
             margin-bottom: 10px;
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .header h1 {
-            margin: 0;
-            font-size: 24px;
             font-weight: 800;
         }
 
-        .header p {
-            margin: 8px 0 0;
-            font-size: 14px;
+        header p {
+            font-size: 1.1rem;
             opacity: 0.9;
-            font-style: italic;
         }
 
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid #e5e7eb;
+        /* 메인 컨테이너 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px 60px 20px;
         }
 
-        .tab-btn {
-            flex: 1;
-            padding: 15px;
-            border: none;
-            background: none;
-            font-size: 16px;
-            font-weight: 600;
-            color: #6b7280;
-            cursor: pointer;
-            transition: all 0.3s;
+        /* 그리드 레이아웃 (3x2 배열) */
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3열 */
+            gap: 30px; /* 카드 사이 간격 */
         }
 
-        .tab-btn.active {
-            color: #764ba2;
-            border-bottom: 3px solid #764ba2;
-            background-color: #f9fafb;
+        /* 반응형: 태블릿 이하에서는 2열 */
+        @media (max-width: 900px) {
+            .game-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
-        .content {
-            padding: 20px;
-            display: none;
+        /* 반응형: 모바일에서는 1열 */
+        @media (max-width: 600px) {
+            .game-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
-        .content.active {
-            display: block;
-        }
-
-        .control-panel {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            align-items: center;
-            justify-content: center;
-        }
-
-        select {
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #d1d5db;
-            font-size: 16px;
-        }
-
-        .btn-generate {
-            background-color: #764ba2;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.1s;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            flex: 1;
-        }
-
-        .btn-generate:active {
-            transform: scale(0.95);
-        }
-
-        .btn-capture {
-            background-color: #4b5563;
-            color: white;
-            border: none;
-            padding: 12px 15px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: transform 0.1s;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .btn-capture:active {
-            transform: scale(0.95);
-        }
-
-        .result-area {
+        /* 게임 카드 스타일 */
+        .game-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            text-decoration: none; /* 링크 밑줄 제거 */
+            color: inherit;
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            min-height: 100px;
+            height: 100%;
         }
 
-        .game-row {
+        .game-card:hover {
+            transform: translateY(-10px); /* 호버 시 위로 살짝 뜸 */
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+        }
+
+        /* 썸네일 이미지 영역 */
+        .card-image {
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+            background-color: #e5e7eb;
+        }
+
+        .card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 비율 유지하며 꽉 채우기 */
+            transition: transform 0.5s ease;
+        }
+
+        .game-card:hover .card-image img {
+            transform: scale(1.05); /* 호버 시 이미지 살짝 확대 */
+        }
+
+        /* 텍스트 영역 */
+        .card-content {
+            padding: 24px;
+            flex-grow: 1;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 10px;
-            background-color: #f8fafc;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-            animation: fadeIn 0.5s ease;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
-        .game-label {
-            font-weight: bold;
-            color: #4b5563;
-            margin-right: 5px;
-            font-size: 14px;
-            width: 40px; 
-            white-space: nowrap; 
+        .game-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-main);
         }
 
-        /* 공 스타일 개선: 그림자 제거, 글씨 검은색으로 변경, 레이아웃 최상단 */
-        .ball {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: 800;
-            font-size: 15px;
-            
-            /* 핵심 수정 사항: 글자색 검정, z-index 추가 */
-            color: #000000 !important; 
-            text-shadow: none;
-            position: relative;
-            z-index: 10;
-            
-            box-shadow: inset -2px -2px 5px rgba(0,0,0,0.1);
+        .game-desc {
+            font-size: 0.95rem;
+            color: var(--text-sub);
+            margin-bottom: 20px;
         }
 
-        /* 배경색만 유지하고 글자색 지정은 삭제 (위에서 통합) */
-        .ball-yellow { background-color: #fbc400; }
-        .ball-blue { background-color: #69c8f2; }
-        .ball-red { background-color: #ff7272; }
-        .ball-gray { background-color: #a0a0a0; }
-        .ball-green { background-color: #b0d840; }
-        
-        .pension-group {
-            padding: 5px 12px;
-            background-color: #333;
-            color: white;
-            border-radius: 4px;
-            font-weight: bold;
-            margin-right: 10px;
-        }
-
-        .ball-pension {
-            background-color: white;
-            border: 2px solid #764ba2;
-            color: #764ba2;
-            width: 36px;
-            height: 36px;
-            text-shadow: none;
-            font-weight: 900;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .footer {
+        .play-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #e0e7ff;
+            color: #4338ca;
+            font-weight: 600;
+            border-radius: 8px;
             text-align: center;
-            padding: 15px;
-            color: #9ca3af;
-            font-size: 12px;
-            border-top: 1px solid #e5e7eb;
+            font-size: 0.9rem;
+            align-self: flex-start;
         }
 
+        .game-card:hover .play-btn {
+            background-color: #4338ca;
+            color: white;
+        }
+        
+        /* 푸터 */
+        footer {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-sub);
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
 
-<div class="container" id="captureArea">
-    <div class="header">
-        <!-- 회차 정보가 여기에 표시됩니다 -->
-        <div id="drawInfoBadge" class="draw-info-badge">로딩 중...</div>
-        <h1 id="headerTitle">안나눔 Lotto 6/45</h1>
-        <p>"절반은 내꺼, 남은 절반도 내꺼"</p>
-    </div>
+    <header>
+        <h1>VIBE CODING GAMES</h1>
+        <p>Gemini와 함께 만든 웹 게임 컬렉션</p>
+    </header>
 
-    <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('lotto')">로또 6/45</button>
-        <button class="tab-btn" onclick="switchTab('pension')">연금복권 720+</button>
-    </div>
+    <div class="container">
+        <div class="game-grid">
+            
+            <a href="./game/Hidden_Typing.html" class="game-card">
+                <div class="card-image">
+                    <img src="./images/Hidden_Typing.JPG" alt="히든 타이핑 게임 화면">
+                </div>
+                <div class="card-content">
+                    <div>
+                        <h2 class="game-title">보이지 않는 타자 연습</h2>
+                        <p class="game-desc">입력 내용이 사라지는 독특한 타자 연습 게임입니다. 당신의 기억력과 정확도를 테스트해보세요.</p>
+                    </div>
+                    <span class="play-btn">게임 시작하기 &rarr;</span>
+                </div>
+            </a>
 
-    <!-- 로또 탭 -->
-    <div id="lotto" class="content active">
-        <div class="control-panel">
-            <select id="gameCount">
-                <option value="1">1 게임 (1,000원)</option>
-                <option value="2">2 게임 (2,000원)</option>
-                <option value="3">3 게임 (3,000원)</option>
-                <option value="4">4 게임 (4,000원)</option>
-                <option value="5" selected>5 게임 (5,000원)</option>
-            </select>
-            <button class="btn-generate" onclick="generateLotto()">번호 생성</button>
-            <button class="btn-capture" onclick="captureScreen()" title="화면 캡처">📸 저장</button>
+            <a href="./game/Lottery.html" class="game-card">
+                <div class="card-image">
+                    <img src="./images/Lottery.JPG" alt="로또 번호 생성기 화면">
+                </div>
+                <div class="card-content">
+                    <div>
+                        <h2 class="game-title">안나눔 Lotto 6/45</h2>
+                        <p class="game-desc">엑셀 알고리즘 기반의 로또 번호 생성기입니다. 대박의 행운을 기원합니다!</p>
+                    </div>
+                    <span class="play-btn">번호 생성하기 &rarr;</span>
+                </div>
+            </a>
+
+            <a href="./game/Omok.html" class="game-card">
+                <div class="card-image">
+                    <img src="./images/Omok.JPG" alt="오목 게임 화면">
+                </div>
+                <div class="card-content">
+                    <div>
+                        <h2 class="game-title">바이브 오목</h2>
+                        <p class="game-desc">흑돌과 백돌의 치열한 두뇌 싸움. AI를 상대로 5개를 먼저 완성하세요.</p>
+                    </div>
+                    <span class="play-btn">한 판 두기 &rarr;</span>
+                </div>
+            </a>
+
+            <a href="./game/Tank_War.html" class="game-card">
+                <div class="card-image">
+                    <img src="./images/Tank_War.JPG" alt="탱크 워 게임 화면">
+                </div>
+                <div class="card-content">
+                    <div>
+                        <h2 class="game-title">Tank War</h2>
+                        <p class="game-desc">바람과 각도를 계산하여 포탄을 발사하세요! 고전적인 포트리스 스타일의 슈팅 게임.</p>
+                    </div>
+                    <span class="play-btn">전장으로 이동 &rarr;</span>
+                </div>
+            </a>
+
+            <a href="./game/WM_Game.html" class="game-card">
+                <div class="card-image">
+                    <img src="./images/WM_Game.JPG" alt="ME or WE 게임 화면">
+                </div>
+                <div class="card-content">
+                    <div>
+                        <h2 class="game-title">ME or WE</h2>
+                        <p class="game-desc">협력할 것인가, 배신할 것인가? Killer AI와의 심리전 게임.</p>
+                    </div>
+                    <span class="play-btn">심리전 시작 &rarr;</span>
+                </div>
+            </a>
+
+            <a href="./game/Yacht_Dice.html" class="game-card">
+                <div class="card-image">
+                    <img src="./images/Yacht_Dice.JPG" alt="요트 다이스 게임 화면">
+                </div>
+                <div class="card-content">
+                    <div>
+                        <h2 class="game-title">Yacht Dice (Solo)</h2>
+                        <p class="game-desc">주사위 5개를 굴려 최적의 조합을 찾아보세요. 전략과 운이 필요한 다이스 게임.</p>
+                    </div>
+                    <span class="play-btn">주사위 굴리기 &rarr;</span>
+                </div>
+            </a>
+
         </div>
-        <div id="lottoResult" class="result-area">
-            <div style="text-align: center; color: #9ca3af; padding: 20px;">
-                구매 금액을 선택하고<br>생성 버튼을 눌러주세요!
-            </div>
-        </div>
     </div>
 
-    <!-- 연금복권 탭 -->
-    <div id="pension" class="content">
-        <div class="control-panel">
-            <span style="font-weight: bold; color: #4b5563;">1세트 (1,000원)</span>
-            <button class="btn-generate" onclick="generatePension()">번호 생성</button>
-            <button class="btn-capture" onclick="captureScreen()" title="화면 캡처">📸 저장</button>
-        </div>
-        <div id="pensionResult" class="result-area">
-             <div style="text-align: center; color: #9ca3af; padding: 20px;">
-                매달 700만원의 행운을<br>확인해보세요!
-            </div>
-        </div>
-    </div>
-
-    <div class="footer">
-        Based on Excel Algorithm | 당첨 기원 🙏
-    </div>
-</div>
-
-<script>
-    // 전역 변수: 현재 탭 상태 ('lotto' or 'pension')
-    let currentMode = 'lotto';
-
-    // 회차 계산 함수
-    function updateDrawInfo() {
-        const today = new Date();
-        const infoBadge = document.getElementById('drawInfoBadge');
-        const title = document.getElementById('headerTitle');
-
-        if (currentMode === 'lotto') {
-            title.innerText = "안나눔 Lotto 6/45";
-            // 로또 1회차: 2002-12-07 (토)
-            const baseDate = new Date('2002-12-07T20:00:00');
-            // 이번 주 토요일 계산
-            const nextDrawDate = new Date(today);
-            nextDrawDate.setDate(today.getDate() + (6 - today.getDay() + 7) % 7);
-            
-            // 날짜 차이(ms) -> 주(week) 단위 변환
-            const diffTime = nextDrawDate.getTime() - baseDate.getTime();
-            const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
-            
-            // 회차 수정: +1 추가 (판매중인 회차 표시)
-            const round = diffWeeks + 2; 
-
-            const dateStr = `${nextDrawDate.getFullYear()}-${(nextDrawDate.getMonth()+1).toString().padStart(2,'0')}-${nextDrawDate.getDate().toString().padStart(2,'0')}`;
-            infoBadge.innerText = `이번 주 제 ${round}회 (${dateStr} 추첨)`;
-            
-        } else {
-            title.innerText = "안나눔 연금복권 720+";
-            // 연금복권 720+ 1회차: 2020-05-07 (목)
-            const baseDate = new Date('2020-05-07T12:00:00');
-            // 이번 주 목요일 계산
-            const nextDrawDate = new Date(today);
-            let daysUntilThu = (4 - today.getDay() + 7) % 7;
-            if (daysUntilThu === 0 && today.getHours() >= 13) {
-                daysUntilThu = 7;
-            }
-            nextDrawDate.setDate(today.getDate() + daysUntilThu);
-
-            const diffTime = nextDrawDate.getTime() - baseDate.getTime();
-            const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
-            
-            // 회차 수정: +1 추가
-            const round = diffWeeks + 2;
-
-            const dateStr = `${nextDrawDate.getFullYear()}-${(nextDrawDate.getMonth()+1).toString().padStart(2,'0')}-${nextDrawDate.getDate().toString().padStart(2,'0')}`;
-            infoBadge.innerText = `이번 주 제 ${round}회 (${dateStr} 추첨)`;
-        }
-    }
-
-    // 초기 실행
-    updateDrawInfo();
-
-    // 탭 전환 함수
-    function switchTab(tabName) {
-        currentMode = tabName;
-        document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-        
-        document.getElementById(tabName).classList.add('active');
-        event.target.classList.add('active');
-        
-        // 회차 정보 업데이트
-        updateDrawInfo();
-    }
-
-    // 로또 번호 생성 함수
-    function generateLotto() {
-        const count = parseInt(document.getElementById('gameCount').value);
-        const resultDiv = document.getElementById('lottoResult');
-        resultDiv.innerHTML = ''; 
-
-        const labels = ['A', 'B', 'C', 'D', 'E'];
-
-        for (let i = 0; i < count; i++) {
-            let numbers = [];
-            for (let j = 1; j <= 45; j++) numbers.push(j);
-            
-            for (let k = numbers.length - 1; k > 0; k--) {
-                const randomIdx = Math.floor(Math.random() * (k + 1));
-                [numbers[k], numbers[randomIdx]] = [numbers[randomIdx], numbers[k]];
-            }
-
-            const winNumbers = numbers.slice(0, 6).sort((a, b) => a - b);
-
-            const row = document.createElement('div');
-            row.className = 'game-row';
-            
-            let html = `<span class="game-label">${labels[i]} 자 동</span>`;
-            
-            winNumbers.forEach(num => {
-                let colorClass = '';
-                if (num <= 10) colorClass = 'ball-yellow';
-                else if (num <= 20) colorClass = 'ball-blue';
-                else if (num <= 30) colorClass = 'ball-red';
-                else if (num <= 40) colorClass = 'ball-gray';
-                else colorClass = 'ball-green';
-
-                html += `<div class="ball ${colorClass}">${num}</div>`;
-            });
-
-            row.innerHTML = html;
-            resultDiv.appendChild(row);
-        }
-    }
-
-    // 연금복권 번호 생성 함수
-    function generatePension() {
-        const resultDiv = document.getElementById('pensionResult');
-        resultDiv.innerHTML = '';
-
-        const group = Math.floor(Math.random() * 5) + 1;
-        
-        let numbers = [];
-        for(let i=0; i<6; i++) {
-            numbers.push(Math.floor(Math.random() * 10));
-        }
-
-        const row = document.createElement('div');
-        row.className = 'game-row';
-        row.style.justifyContent = 'center';
-
-        let html = `<span class="pension-group">${group}조</span>`;
-        
-        numbers.forEach(num => {
-            html += `<div class="ball ball-pension">${num}</div>`;
-        });
-
-        row.innerHTML = html;
-        resultDiv.appendChild(row);
-    }
-
-    // 스크린샷 캡처 함수
-    function captureScreen() {
-        const element = document.getElementById('captureArea');
-        
-        html2canvas(element, { 
-            backgroundColor: "#ffffff",
-            scale: 2, // 해상도 2배 (선명하게)
-            logging: false,
-            useCORS: true
-        }).then(canvas => {
-            const link = document.createElement('a');
-            link.download = `lotto_result_${new Date().getTime()}.png`;
-            link.href = canvas.toDataURL();
-            link.click();
-        }).catch(err => {
-            alert("캡처에 실패했습니다: " + err);
-        });
-    }
-</script>
+    <footer>
+        <p>© 2025 Vibe Coding Games by Gemini & You. All rights reserved.</p>
+    </footer>
 
 </body>
 </html>
