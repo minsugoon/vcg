@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>바이브 오목 (AI & 타이머)</title>
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+
+        .status-bar {
+            background-color: white;
+            padding: 10px 30px;
+            border-radius: 50px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .turn-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .turn-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            border: 1px solid rgba(0,0,0,0.2);
+        }
+
+        .black-turn { background-color: black; }
+        .white-turn { background-color: white; }
+
+        .timer {
+            color: #ef4444;
+            font-variant-numeric: tabular-nums;
+            min-width: 60px;
+        }
+
+        /* 바둑판 영역 */
+        .board-container {
+            position: relative;
+        }
+
+        .board-wrapper {
+            position: relative;
+            padding: 20px;
+            background-color: #dcb35c; /* 나무 색상 */
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            background-image: linear-gradient(45deg, rgba(0,0,0,0.03) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.03) 75%, rgba(0,0,0,0.03)), 
+                              linear-gradient(45deg, rgba(0,0,0,0.03) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.03) 75%, rgba(0,0,0,0.03));
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+        }
+
+        canvas {
+            cursor: pointer;
+            display: block;
+        }
+
+        /* 설정 모달 오버레이 */
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+        }
+
+        .setup-panel {
+            background-color: white;
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 80%;
+            max-width: 300px;
+        }
+
+        .setup-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .setup-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #374151;
+        }
+
+        .setup-group select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+        }
+
+        .controls {
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            background-color: #4b5563;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button.primary-btn {
+            background-color: #2563eb;
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1rem;
+        }
+
+        button:hover {
+            filter: brightness(0.9);
+        }
+
+        /* 알림 모달 */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #ef4444;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(10px);
+        }
+        
+        .toast-info {
+            background-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>바이브 오목</h1>
+    
+    <div class="status-bar">
+        <div class="turn-info">
+            <span id="turnIndicator" class="turn-indicator black-turn"></span>
+            <span id="statusText">설정 대기 중...</span>
+        </div>
+        <div class="timer" id="timerDisplay">60s</div>
+    </div>
+
+    <div class="board-container">
+        <div class="board-wrapper">
+            <canvas id="omokBoard" width="450" height="450"></canvas>
+        </div>
+        
+        <!-- 설정 모달 -->
+        <div id="setupModal" class="modal-overlay">
+            <div class="setup-panel">
+                <h2 style="margin-top:0;">게임 설정</h2>
+                
+                <div class="setup-group">
+                    <label>⚫ 흑돌 (선공)</label>
+                    <select id="blackPlayerType">
+                        <option value="human">사람 (Player)</option>
+                        <option value="ai">AI (컴퓨터)</option>
+                    </select>
+                </div>
+
+                <div class="setup-group">
+                    <label>⚪ 백돌 (후공)</label>
+                    <select id="whitePlayerType">
+                        <option value="human" selected>사람 (Player)</option>
+                        <option value="ai">AI (컴퓨터)</option>
+                    </select>
+                </div>
+
+                <button class="primary-btn" onclick="startGame()">게임 시작</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button onclick="showSetup()">메뉴 / 재시작</button>
+    </div>
+
+    <div id="toast" class="toast">경고 메시지</div>
+
+    <script>
+        const canvas = document.getElementById('omokBoard');
+        const ctx = canvas.getContext('2d');
+        const statusText = document.getElementById('statusText');
+        const turnIndicator = document.getElementById('turnIndicator');
+        const toast = document.getElementById('toast');
+        const setupModal = document.getElementById('setupModal');
+        const timerDisplay = document.getElementById('timerDisplay');
+
+        // 게임 설정 상수
+        const BOARD_SIZE = 15;
+        const CELL_SIZE = 30;
+        const PADDING = 15;
+        const TIME_LIMIT = 60; // 60초 제한
+        
+        // 상태 변수
+        let board = []; 
+        let currentPlayer = 1; // 1: 흑, 2: 백
+        let gameActive = false;
+        let players = { 1: 'human', 2: 'human' }; // 플레이어 설정
+
+        // 타이머 변수
+        let timeLeft = TIME_LIMIT;
+        let timerInterval = null;
+
+        // 초기 화면 그리기
+        drawBoardBackground();
+
+        // 게임 시작 함수
+        function startGame() {
+            const blackType = document.getElementById('blackPlayerType').value;
+            const whiteType = document.getElementById('whitePlayerType').value;
+
+            players = {
+                1: blackType,
+                2: whiteType
+            };
+
+            setupModal.style.display = 'none';
+            initBoard();
+        }
+
+        function showSetup() {
+            stopTimer();
+            gameActive = false;
+            setupModal.style.display = 'flex';
+        }
+
+        // 초기화
+        function initBoard() {
+            board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(0));
+            currentPlayer = 1;
+            gameActive = true;
+            updateStatus("흑돌 차례입니다");
+            drawBoard();
+            
+            // 첫 턴 처리
+            processTurn();
+        }
+
+        // 턴 처리 (타이머 리셋 및 AI 체크)
+        function processTurn() {
+            if (!gameActive) return;
+
+            // 타이머 리셋
+            stopTimer();
+            startTimer();
+
+            // 현재 턴 플레이어 확인
+            const type = players[currentPlayer];
+
+            if (type === 'ai') {
+                // AI 턴일 경우 클릭 방지하고 잠시 후 착수
+                canvas.style.cursor = 'wait';
+                setTimeout(makeAiMove, 700);
+            } else {
+                canvas.style.cursor = 'pointer';
+            }
+        }
+
+        // 타이머 로직
+        function startTimer() {
+            timeLeft = TIME_LIMIT;
+            updateTimerDisplay();
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+
+                if (timeLeft <= 0) {
+                    stopTimer();
+                    const loser = currentPlayer === 1 ? '흑돌' : '백돌';
+                    const winner = currentPlayer === 1 ? '백돌' : '흑돌';
+                    showToast(`⏰ 시간 초과! ${winner} 승리!`, true);
+                    updateStatus(`${winner} 승리 (시간 초과)`);
+                    gameActive = false;
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function updateTimerDisplay() {
+            timerDisplay.textContent = `${timeLeft}s`;
+            if (timeLeft <= 10) {
+                timerDisplay.style.color = '#dc2626'; // 빨간색 강조
+                timerDisplay.style.fontWeight = '900';
+            } else {
+                timerDisplay.style.color = '#1f2937';
+                timerDisplay.style.fontWeight = 'bold';
+            }
+        }
+
+        // 보드 그리기 (전체)
+        function drawBoard() {
+            drawBoardBackground();
+            // 돌 그리기
+            for (let y = 0; y < BOARD_SIZE; y++) {
+                for (let x = 0; x < BOARD_SIZE; x++) {
+                    if (board[y][x] !== 0) {
+                        drawStone(x, y, board[y][x]);
+                    }
+                }
+            }
+        }
+
+        function drawBoardBackground() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = '#000';
+
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                ctx.moveTo(PADDING, PADDING + i * CELL_SIZE);
+                ctx.lineTo(PADDING + (BOARD_SIZE - 1) * CELL_SIZE, PADDING + i * CELL_SIZE);
+                ctx.moveTo(PADDING + i * CELL_SIZE, PADDING);
+                ctx.lineTo(PADDING + i * CELL_SIZE, PADDING + (BOARD_SIZE - 1) * CELL_SIZE);
+            }
+            ctx.stroke();
+
+            const dots = [3, 7, 11];
+            ctx.fillStyle = '#000';
+            dots.forEach(x => {
+                dots.forEach(y => {
+                    ctx.beginPath();
+                    ctx.arc(PADDING + x * CELL_SIZE, PADDING + y * CELL_SIZE, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            });
+        }
+
+        function drawStone(x, y, player) {
+            const centerX = PADDING + x * CELL_SIZE;
+            const centerY = PADDING + y * CELL_SIZE;
+            const radius = CELL_SIZE / 2 - 2;
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+
+            const gradient = ctx.createRadialGradient(
+                centerX - radius/3, centerY - radius/3, radius/10,
+                centerX, centerY, radius
+            );
+
+            if (player === 1) { 
+                gradient.addColorStop(0, '#555');
+                gradient.addColorStop(1, '#000');
+            } else { 
+                gradient.addColorStop(0, '#fff');
+                gradient.addColorStop(1, '#ddd');
+            }
+
+            ctx.fillStyle = gradient;
+            ctx.fill();
+        }
+
+        // 클릭 이벤트 처리 (사람만 가능)
+        canvas.addEventListener('click', (e) => {
+            if (!gameActive) return;
+            if (players[currentPlayer] === 'ai') return; // AI 턴에는 클릭 무시
+
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.round((e.clientX - rect.left - PADDING) / CELL_SIZE);
+            const y = Math.round((e.clientY - rect.top - PADDING) / CELL_SIZE);
+
+            placeStone(x, y);
+        });
+
+        // 돌 놓기 (공통 로직)
+        function placeStone(x, y) {
+            if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE) return;
+            if (board[y][x] !== 0) return;
+
+            // 금수 체크 (흑돌만)
+            if (currentPlayer === 1) {
+                const forbiddenType = checkForbidden(x, y, 1);
+                if (forbiddenType > 0) {
+                    // 사람이면 경고, AI면 이 함수 호출 전에 필터링됨
+                    if (players[1] === 'human') {
+                        showToast(`⚠️ ${forbiddenType === 33 ? '3-3' : '4-4'} 금수입니다!`);
+                    }
+                    return;
+                }
+            }
+
+            // 착수
+            board[y][x] = currentPlayer;
+            drawBoard();
+            
+            // 마지막 수 표시 (선택적)
+            drawMarker(x, y);
+
+            // 승리 체크
+            if (checkWin(x, y, currentPlayer)) {
+                stopTimer();
+                showToast(`🎉 ${currentPlayer === 1 ? '흑돌' : '백돌'} 승리!`, true);
+                updateStatus(`${currentPlayer === 1 ? '흑돌' : '백돌'} 승리!`);
+                gameActive = false;
+                return;
+            }
+
+            // 턴 변경
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
+            updateStatus(currentPlayer === 1 ? "흑돌 차례입니다" : "백돌 차례입니다");
+            
+            processTurn(); // 다음 턴 처리
+        }
+
+        function drawMarker(x, y) {
+            const centerX = PADDING + x * CELL_SIZE;
+            const centerY = PADDING + y * CELL_SIZE;
+            ctx.beginPath();
+            ctx.fillStyle = 'red';
+            ctx.arc(centerX, centerY, 3, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        // ==========================================
+        //  AI 로직 (간단한 휴리스틱)
+        // ==========================================
+        function makeAiMove() {
+            if (!gameActive) return;
+
+            // 가능한 모든 수에 점수 매기기
+            let bestScore = -Infinity;
+            let bestMoves = [];
+
+            for (let y = 0; y < BOARD_SIZE; y++) {
+                for (let x = 0; x < BOARD_SIZE; x++) {
+                    if (board[y][x] === 0) {
+                        // 흑돌 AI인 경우 금수 자리는 제외
+                        if (currentPlayer === 1 && checkForbidden(x, y, 1) > 0) continue;
+
+                        const score = evaluatePosition(x, y, currentPlayer);
+                        
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestMoves = [{x, y}];
+                        } else if (score === bestScore) {
+                            bestMoves.push({x, y});
+                        }
+                    }
+                }
+            }
+
+            if (bestMoves.length > 0) {
+                // 점수가 같은 곳 중 랜덤 선택
+                const move = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+                placeStone(move.x, move.y);
+            } else {
+                // 둘 곳이 없으면 (거의 없겠지만) 무승부 또는 패배 처리
+                gameActive = false;
+                updateStatus("더 이상 둘 곳이 없습니다.");
+            }
+        }
+
+        function evaluatePosition(x, y, color) {
+            const opponent = color === 1 ? 2 : 1;
+            
+            // 공격 점수 (내 돌 연결)
+            let attackScore = getLineScore(x, y, color);
+            
+            // 방어 점수 (상대 돌 막기) - 공격보다 약간 낮게 설정하여 이길 수 있으면 이기도록 함
+            let defenseScore = getLineScore(x, y, opponent);
+
+            // 우선순위: 1. 내 승리(5) 2. 상대 승리 저지(5) 3. 내 4목 4. 상대 4목 저지 ...
+            // getLineScore가 10000점 이상이면 승리 확정 수
+            
+            return attackScore + (defenseScore * 0.9); // 공격 우선
+        }
+
+        function getLineScore(x, y, color) {
+            let totalScore = 0;
+            const directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
+
+            board[y][x] = color; // 가상 착수
+
+            for (let [dx, dy] of directions) {
+                const count = countConsecutive(x, y, dx, dy, color);
+                const openEnds = countOpenEnds(x, y, dx, dy, color, count);
+
+                if (count >= 5) totalScore += 100000; // 승리
+                else if (count === 4) {
+                    if (openEnds >= 1) totalScore += 5000; // 4목 (한쪽이라도 뚫리면 위협)
+                    if (openEnds === 2) totalScore += 5000; // 양쪽 뚫린 4는 승리 확정급
+                }
+                else if (count === 3) {
+                    if (openEnds === 2) totalScore += 1000; // 열린 3
+                    else if (openEnds === 1) totalScore += 100;
+                }
+                else if (count === 2) {
+                    if (openEnds === 2) totalScore += 50;
+                    else if (openEnds === 1) totalScore += 10;
+                }
+                else if (count === 1) {
+                     // 중앙에 가까울수록 가점
+                     const center = Math.floor(BOARD_SIZE / 2);
+                     const dist = Math.abs(x - center) + Math.abs(y - center);
+                     totalScore += (10 - dist); 
+                }
+            }
+
+            board[y][x] = 0; // 복구
+            return totalScore;
+        }
+
+        // ==========================================
+        //  유틸리티 및 판정 로직
+        // ==========================================
+        function updateStatus(msg) {
+            statusText.textContent = msg;
+            turnIndicator.className = 'turn-indicator ' + (currentPlayer === 1 ? 'black-turn' : 'white-turn');
+        }
+
+        function showToast(msg, isSuccess = false) {
+            toast.textContent = msg;
+            toast.className = 'toast show';
+            if (isSuccess) toast.classList.add('toast-info');
+            else toast.classList.remove('toast-info');
+            setTimeout(() => { toast.className = 'toast'; }, 3000);
+        }
+
+        const directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
+
+        function checkWin(x, y, color) {
+            for (let [dx, dy] of directions) {
+                let count = 1;
+                for (let i = 1; i < 5; i++) {
+                    const nx = x + dx * i, ny = y + dy * i;
+                    if (!isValid(nx, ny) || board[ny][nx] !== color) break;
+                    count++;
+                }
+                for (let i = 1; i < 5; i++) {
+                    const nx = x - dx * i, ny = y - dy * i;
+                    if (!isValid(nx, ny) || board[ny][nx] !== color) break;
+                    count++;
+                }
+                if (count === 5) return true;
+            }
+            return false;
+        }
+
+        function checkForbidden(x, y, color) {
+            if (color !== 1) return 0; 
+            let threeCount = 0, fourCount = 0;
+            board[y][x] = color;
+            for (let [dx, dy] of directions) {
+                const lineInfo = getLineInfo(x, y, dx, dy, color);
+                if (lineInfo.isOpenThree) threeCount++;
+                if (lineInfo.isFour) fourCount++;
+            }
+            board[y][x] = 0;
+            if (fourCount >= 2) return 44;
+            if (threeCount >= 2) return 33;
+            return 0;
+        }
+
+        function getLineInfo(x, y, dx, dy, color) {
+            let lineStr = "";
+            for (let i = -4; i <= 4; i++) {
+                const nx = x + dx * i, ny = y + dy * i;
+                if (!isValid(nx, ny)) lineStr += "3";
+                else if (i === 0) lineStr += "1";
+                else {
+                    const val = board[ny][nx];
+                    lineStr += val === color ? "1" : (val === 0 ? "0" : "2");
+                }
+            }
+            let isFour = false;
+            if (lineStr.includes("1111") && !lineStr.includes("11111")) isFour = true;
+            
+            const consecutive = countConsecutive(x, y, dx, dy, color);
+            const openEnds = countOpenEnds(x, y, dx, dy, color, consecutive);
+            const gapFour = checkGapFour(lineStr); 
+
+            if (consecutive === 4) isFour = true;
+            if (gapFour) isFour = true;
+            if (consecutive >= 5) isFour = false;
+
+            let isOpenThree = false;
+            if (consecutive === 3 && openEnds === 2 && lineStr.includes("01110")) isOpenThree = true;
+            if (checkGapThree(lineStr)) isOpenThree = true;
+
+            return { isFour, isOpenThree };
+        }
+
+        function countConsecutive(x, y, dx, dy, color) {
+            let count = 1;
+            for (let i = 1; i <= 4; i++) {
+                if (isValid(x + dx * i, y + dy * i) && board[y + dy * i][x + dx * i] === color) count++;
+                else break;
+            }
+            for (let i = 1; i <= 4; i++) {
+                if (isValid(x - dx * i, y - dy * i) && board[y - dy * i][x - dx * i] === color) count++;
+                else break;
+            }
+            return count;
+        }
+
+        function isValid(x, y) {
+            return x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE;
+        }
+
+        function countOpenEnds(x, y, dx, dy, color, len) {
+            let opens = 0;
+            let i = 1;
+            while(isValid(x + dx*i, y + dy*i) && board[y+dy*i][x+dx*i] === color) i++;
+            if (isValid(x + dx*i, y + dy*i) && board[y+dy*i][x+dx*i] === 0) opens++;
+            let j = 1;
+            while(isValid(x - dx*j, y - dy*j) && board[y-dy*j][x-dx*j] === color) j++;
+            if (isValid(x - dx*j, y - dy*j) && board[y-dy*j][x-dx*j] === 0) opens++;
+            return opens;
+        }
+
+        function checkGapFour(str) {
+            const p = str.substring(1, 8);
+            if (/11011/.test(str) || /11101/.test(str) || /10111/.test(str)) return true;
+            return false;
+        }
+
+        function checkGapThree(str) {
+            if (/010110/.test(str) || /011010/.test(str)) return true;
+            return false;
+        }
+
+    </script>
+</body>
+</html>
